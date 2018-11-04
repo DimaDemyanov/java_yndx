@@ -8,7 +8,7 @@
 После этого, полученная информация о каждом документе складывается в файл на диске (в формате json).
 
 Для запуска программы нужно выполнить 
-java -jar searcher.jar [-i <inputfilename>(required)] [-o <outputfilename>] [-p <proxy adress XXX.XXX.X.X:XXXX>]
+java -jar searcher.jar [-i <inputfilename>(required)] [-o <outputfilename>] [-p <proxy adress *.*.*.*:*>]
     
 # Пример запуска
 
