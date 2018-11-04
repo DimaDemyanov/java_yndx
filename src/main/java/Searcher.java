@@ -1,6 +1,4 @@
 import java.io.*;
-import java.lang.reflect.Field;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,7 +6,10 @@ import java.util.stream.Collectors;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.collections4.CollectionUtils;
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -21,12 +22,14 @@ public class Searcher {
     private final static String GREENURL_TAG = ".typo_type_greenurl a.path__item";
     private final static String PAGE_TAG = "a.link_theme_normal";
     private final static String ANNOTATIONS_TAG = ".text-container";
-    private final static String ATTRIBUTE_UTL = "href";
-    private final static String INPUT_FILE = "in";
-    private final static String OUTPUT_FILE = "out.json";
-    public static void main(String[] args) throws IOException {
+    private final static String ATTRIBUTE_URL = "href";
+    private final static String DEFAULT_OUTPUT_FILE = "out.json";
+    public static void main(String[] args) throws IOException, ParseException {
+        CommandLine cmd = new CliParser().parse(args);
         BufferedReader reader = new BufferedReader(
-                new InputStreamReader(new FileInputStream(INPUT_FILE), StandardCharsets.UTF_8)
+                new InputStreamReader(
+                        new FileInputStream(cmd.getOptionValue("input")), StandardCharsets.UTF_8
+                )
         );
         Gson gson = new GsonBuilder()
                 .disableHtmlEscaping()
@@ -35,9 +38,15 @@ public class Searcher {
         List<List<Info>> resultDocuments = new ArrayList<>();
         while(reader.ready()) {
             String target = reader.readLine();
-            System.out.println(target);
-            Document document = Jsoup.connect(SEARCH_URL)
-//                    .proxy("156.237.192.228", 	1080)
+            Connection connection;
+            if (cmd.hasOption("proxy")) {
+                String[] proxy = cmd.getOptionValue("proxy").split(":");
+                if(proxy.length < 2)
+                    throw new IllegalArgumentException("Incorrect proxy");
+                connection = Jsoup.connect(SEARCH_URL).proxy(proxy[0], Integer.parseInt(proxy[1]));
+            } else
+                connection = Jsoup.connect(SEARCH_URL);
+            Document document = connection
                     .data(SEARCH_PARAM, target)
                     .get();
             List<Element> elements = document.select(PAGES_TAG);
@@ -50,7 +59,7 @@ public class Searcher {
                         .collect(Collectors.toList());
                 Element page = element.selectFirst(PAGE_TAG);
                 String title = page.text();
-                String url = page.attr(ATTRIBUTE_UTL);
+                String url = page.attr(ATTRIBUTE_URL);
                 Elements annotations = element.select(ANNOTATIONS_TAG);
                 resultInfos.add(new Info(greenUrls, url, title,
                         CollectionUtils.isEmpty(annotations)
@@ -59,7 +68,9 @@ public class Searcher {
             }
             resultDocuments.add(resultInfos);
         }
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(OUTPUT_FILE))) {
+        try (BufferedWriter writer = new BufferedWriter(
+                new FileWriter( cmd.hasOption("output")?cmd.getOptionValue("output"):DEFAULT_OUTPUT_FILE))
+        ) {
             gson.toJson(resultDocuments, writer);
         }
 

@@ -1,13 +1,13 @@
 
 import java.util.List;
 
-public class Info {
+class Info {
     private List<String> greenUrls;
     private String url;
     private String title;
     private String annotation;
 
-    public Info(List<String> greenUrls, String url, String title, String annotation) {
+    Info(List<String> greenUrls, String url, String title, String annotation) {
         this.greenUrls = greenUrls;
         this.url = url;
         this.title = title;
